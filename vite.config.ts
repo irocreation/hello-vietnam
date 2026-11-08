@@ -25,7 +25,7 @@ export default defineConfig(({ mode }) => {
       react(),
       VitePWA({
         registerType: "prompt",
-        includeAssets: ["icon.svg", "apple-touch-icon.png"],
+        includeAssets: ["icon.svg", "apple-touch-icon-v2.png"],
         manifest: {
           name: "HELLO VIETNAM",
           short_name: "Vietnam",
@@ -36,9 +36,13 @@ export default defineConfig(({ mode }) => {
           start_url: base,
           scope: base,
           icons: [
-            { src: base + "icon-192.png", sizes: "192x192", type: "image/png" },
             {
-              src: base + "icon-512.png",
+              src: base + "icon-192-v2.png",
+              sizes: "192x192",
+              type: "image/png",
+            },
+            {
+              src: base + "icon-512-v2.png",
               sizes: "512x512",
               type: "image/png",
               purpose: "any maskable",

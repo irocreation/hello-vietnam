@@ -3718,7 +3718,7 @@ main,
   min-width: 0;
 }
 .home-grid {
-  grid-template-columns: minmax(0, .95fr) minmax(0, 1.4fr) minmax(0, 1.05fr);
+  grid-template-columns: minmax(0, 0.95fr) minmax(0, 1.4fr) minmax(0, 1.05fr);
 }
 .hero-dates,
 .flight-meta,
@@ -3743,4 +3743,97 @@ main,
   .date-tabs {
     overscroll-behavior-x: contain;
   }
+}
+
+.place-photo {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  cursor: default;
+}
+label.place-photo {
+  cursor: pointer;
+}
+.place-photo > img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.place-photo-fallback {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding-bottom: 17px;
+}
+.place-photo-fallback > svg {
+  stroke-width: 1.1;
+  transform: rotate(-8deg);
+}
+.place-photo-fallback > span {
+  font-size: 12px;
+  letter-spacing: 4px;
+  font-family: "Outfit", sans-serif;
+  font-weight: 600;
+}
+.photo-hint {
+  position: absolute;
+  bottom: 10px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: #fff8ede8;
+  color: #675542;
+  border-radius: 20px;
+  padding: 6px 11px;
+  font-size: 9px;
+  white-space: nowrap;
+}
+.photo-busy {
+  position: absolute;
+  inset: 0;
+  background: #fff8edd9;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  gap: 9px;
+  font-size: 11px;
+  color: #3d8b75;
+}
+.place-photo input:focus-visible + .photo-hint {
+  outline: 3px solid #3d8b75;
+}
+.place-photo:has(input:focus-visible) {
+  outline: 3px solid #3d8b75;
+  outline-offset: -4px;
+}
+.place-art .favorite {
+  z-index: 2;
+}
+label.place-photo.is-busy {
+  pointer-events: none;
+}
+.photo-clear {
+  position: absolute;
+  right: 10px;
+  bottom: 10px;
+  z-index: 2;
+  background: #fff8ede8;
+  border-radius: 20px;
+  padding: 6px 10px;
+  min-height: 32px;
+  font-size: 9px;
+  color: #675542;
+}
+.place-art:has(.photo-clear) .photo-hint {
+  left: 12px;
+  transform: none;
 }

@@ -250,5 +250,63 @@ test("PostgreSQL: RLS, two-member roles, independent checks, CAS and idempotency
       );
     });
   });
+  await pg.exec(
+    `create schema storage;create table storage.objects(id uuid primary key default gen_random_uuid(),bucket_id text not null,name text not null);alter table storage.objects enable row level security;grant usage on schema storage to authenticated;grant select,insert,delete on storage.objects to authenticated;`,
+  );
+  await pg.exec(
+    await readFile(
+      new URL("../supabase/migrations/002_place_photos.sql", import.meta.url),
+      "utf8",
+    ),
+  );
+  const photoName = ids.trip + "/p1/20000000-0000-4000-8000-000000000001.jpg";
+  await t.test(
+    "private photos: admin uploads, viewer reads, outsider and anonymous denied",
+    async () => {
+      await as(ids.admin, async () => {
+        await pg.query(
+          "insert into storage.objects(bucket_id,name) values($1,$2)",
+          ["place-photos", photoName],
+        );
+      });
+      await as(ids.viewer, async () => {
+        assert.equal(
+          (await pg.query("select * from storage.objects")).rows.length,
+          1,
+        );
+        await assert.rejects(
+          pg.query(
+            "insert into storage.objects(bucket_id,name) values($1,$2)",
+            ["place-photos", photoName],
+          ),
+          /row-level security/,
+        );
+        assert.equal(
+          (await pg.query("delete from storage.objects returning id")).rows
+            .length,
+          0,
+        );
+      });
+      await as(ids.outsider, async () => {
+        assert.equal(
+          (await pg.query("select * from storage.objects")).rows.length,
+          0,
+        );
+        await assert.rejects(
+          pg.query(
+            "insert into storage.objects(bucket_id,name) values($1,$2)",
+            ["place-photos", photoName],
+          ),
+          /row-level security/,
+        );
+      });
+      await as(null, async () => {
+        await assert.rejects(
+          pg.query("select * from storage.objects"),
+          /permission denied/,
+        );
+      });
+    },
+  );
   await pg.close();
 });

@@ -51,6 +51,7 @@ import {
   type SharedState,
 } from "./data";
 import { TripProvider, type TripController } from "./TripProvider";
+import PlacePhoto from "./PlacePhoto";
 import { VietnamArt, Flower } from "./Art";
 type Tab = "Home" | "Schedule" | "Packing" | "Places" | "Info";
 type Editor = {
@@ -277,7 +278,12 @@ function TripApp({ controller }: { controller: TripController }) {
       );
       return;
     }
-    if (editor.kind === "hotels" && v.checkin && v.checkout && v.checkout <= v.checkin) {
+    if (
+      editor.kind === "hotels" &&
+      v.checkin &&
+      v.checkout &&
+      v.checkout <= v.checkin
+    ) {
       setError("チェックアウトはチェックインより後の日時を選択してください。");
       return;
     }
@@ -875,7 +881,7 @@ function TripApp({ controller }: { controller: TripController }) {
                             {overlaps(e) && (
                               <span className="overlap">時間の重複あり</span>
                             )}
-                            {isAdmin && !e.flightId && (
+                            {isAdmin && !e.flightId && !e.hotelId && (
                               <button
                                 className={`check-button ${e.done ? "checked" : ""}`}
                                 aria-label={
@@ -899,14 +905,21 @@ function TripApp({ controller }: { controller: TripController }) {
                             {isAdmin && (
                               <button
                                 onClick={() =>
-                                  e.flightId
+                                  e.hotelId
                                     ? open(
-                                        "flights",
-                                        data.flights.find(
-                                          (f) => f.id === e.flightId,
+                                        "hotels",
+                                        data.hotels.find(
+                                          (h) => h.id === e.hotelId,
                                         ),
                                       )
-                                    : open("events", e)
+                                    : e.flightId
+                                      ? open(
+                                          "flights",
+                                          data.flights.find(
+                                            (f) => f.id === e.flightId,
+                                          ),
+                                        )
+                                      : open("events", e)
                                 }
                               >
                                 <Pencil size={14} />
@@ -1140,14 +1153,45 @@ function TripApp({ controller }: { controller: TripController }) {
                         className={`place-card ${p.visited ? "visited" : ""}`}
                       >
                         <div className={`place-art art-${i % 3}`}>
-                          <Icon category={p.category} size={58} />
-                          <span>
-                            {p.city === "ホーチミン"
-                              ? "SAIGON"
-                              : p.city === "ホイアン"
-                                ? "HOI AN"
-                                : "DA NANG"}
-                          </span>
+                          <PlacePhoto
+                            path={p.photoPath}
+                            placeId={p.id}
+                            name={p.name}
+                            identity={view.identity}
+                            fallback={
+                              <>
+                                <Icon category={p.category} size={58} />
+                                <span>
+                                  {p.city === "ホーチミン"
+                                    ? "SAIGON"
+                                    : p.city === "ホイアン"
+                                      ? "HOI AN"
+                                      : "DA NANG"}
+                                </span>
+                              </>
+                            }
+                            onError={setError}
+                            onSave={async (path) => {
+                              if (!engine.active)
+                                throw new Error("ログインし直してください。");
+                              const current = dataRef.current;
+                              if (
+                                !current.places.some(
+                                  (place) => place.id === p.id,
+                                )
+                              )
+                                throw new Error("この場所は削除されています。");
+                              await engine.edit({
+                                ...current,
+                                places: current.places.map((place) =>
+                                  place.id === p.id
+                                    ? { ...place, photoPath: path }
+                                    : place,
+                                ),
+                              });
+                              setNotice("写真を保存しました。自動同期します。");
+                            }}
+                          />
                           {isAdmin && (
                             <button
                               className={`favorite icon-button ${p.favorite ? "is-favorite" : ""}`}
@@ -1386,11 +1430,21 @@ function TripApp({ controller }: { controller: TripController }) {
                       <h3>{h.name}</h3>
                       <div className="hotel-dates">
                         <span>
-                          CHECK IN<b>{h.checkin ? h.checkin.replace("T", " · ") : "未確認"}</b>
+                          CHECK IN
+                          <b>
+                            {h.checkin
+                              ? h.checkin.replace("T", " · ")
+                              : "未確認"}
+                          </b>
                         </span>
                         <ArrowRight size={16} />
                         <span>
-                          CHECK OUT<b>{h.checkout ? h.checkout.replace("T", " · ") : "未確認"}</b>
+                          CHECK OUT
+                          <b>
+                            {h.checkout
+                              ? h.checkout.replace("T", " · ")
+                              : "未確認"}
+                          </b>
                         </span>
                       </div>
                       <p className="address">

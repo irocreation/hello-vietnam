@@ -64,7 +64,12 @@ export function TripProvider({
       const instance = new SyncEngine(i, createRemote(i));
       current = instance;
       await instance.load();
-      if (!alive || loggedOut.current || epoch !== accessEpoch.current || current !== instance) {
+      if (
+        !alive ||
+        loggedOut.current ||
+        epoch !== accessEpoch.current ||
+        current !== instance
+      ) {
         instance.dispose();
         return;
       }
@@ -76,17 +81,26 @@ export function TripProvider({
       current?.dispose();
       current = undefined;
       setEngine(undefined);
-      await db.transaction("rw", db.snapshots, db.queue, db.meta, async () => {
-        await db.snapshots.clear();
-        await db.queue.clear();
-        await db.meta.clear();
-      });
+      await db.transaction(
+        "rw",
+        [db.snapshots, db.queue, db.meta, db.photos],
+        async () => {
+          await db.snapshots.clear();
+          await db.queue.clear();
+          await db.meta.clear();
+          await db.photos.clear();
+        },
+      );
       await Dexie.delete("hello-vietnam-v1");
     }
     async function restore() {
       const attempt = ++generation;
       const epoch = accessEpoch.current;
-      const valid = () => alive && attempt === generation && epoch === accessEpoch.current && !loggedOut.current;
+      const valid = () =>
+        alive &&
+        attempt === generation &&
+        epoch === accessEpoch.current &&
+        !loggedOut.current;
       if (!valid()) return;
       try {
         const active = await db.meta.get("active");
@@ -218,11 +232,16 @@ export function TripProvider({
     setBusy(true);
     engine?.dispose();
     setEngine(undefined);
-    await db.transaction("rw", db.snapshots, db.queue, db.meta, async () => {
-      await db.snapshots.clear();
-      await db.queue.clear();
-      await db.meta.clear();
-    });
+    await db.transaction(
+      "rw",
+      [db.snapshots, db.queue, db.meta, db.photos],
+      async () => {
+        await db.snapshots.clear();
+        await db.queue.clear();
+        await db.meta.clear();
+        await db.photos.clear();
+      },
+    );
     await Dexie.delete("hello-vietnam-v1");
     if (supabase) {
       const { error } = await supabase.auth.signOut({ scope: "local" });

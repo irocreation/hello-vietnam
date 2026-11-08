@@ -33,6 +33,7 @@ export type Event = {
   url: string;
   done: boolean;
   flightId?: string;
+  hotelId?: string;
   order: number;
 };
 export type Pack = {
@@ -54,6 +55,7 @@ export type Place = {
   lng: string;
   visited: boolean;
   favorite: boolean;
+  photoPath?: string;
 };
 export type Flight = {
   id: string;
@@ -147,6 +149,10 @@ export const emptyState = (): SharedState => ({
   notes: [],
 });
 export const db = new Dexie("hello-vietnam-sync-v2") as Dexie & {
+  photos: EntityTable<
+    { key: string; scope: string; path: string; blob: Blob },
+    "key"
+  >;
   snapshots: EntityTable<Snapshot, "scope">;
   queue: EntityTable<QueueItem, "key">;
   meta: EntityTable<{ key: string; value: unknown }, "key">;
@@ -156,10 +162,11 @@ db.version(1).stores({
   queue: "key,scope,kind",
   meta: "key",
 });
+db.version(2).stores({ photos: "key,scope,path" });
 export function toShared(s: State): SharedState {
   return {
     ...s,
-    events: s.events.filter((e) => !e.flightId),
+    events: s.events.filter((e) => !e.flightId && !e.hotelId),
     packing: s.packing.map(({ done, ...p }) => p),
   };
 }
@@ -176,11 +183,46 @@ export function materialize(
   });
 }
 export function syncFlights(s: State): State {
-  const regular = s.events.filter((e) => !e.flightId);
+  const regular = s.events
+    .filter((e) => !e.flightId && !e.hotelId)
+    .filter(
+      (e) =>
+        !(
+          e.id === "e1" &&
+          e.name === "ホテルにチェックイン" &&
+          e.memo === "ホテルが決まったら詳細を登録しよう" &&
+          s.hotels.some(
+            (h) => h.city === e.place && h.checkin.slice(0, 10) === e.date,
+          )
+        ),
+    );
+  const hotelEvents: Event[] = s.hotels.flatMap((h) =>
+    [
+      { at: h.checkin, action: "チェックイン", suffix: "in" },
+      { at: h.checkout, action: "チェックアウト期限", suffix: "out" },
+    ]
+      .filter((x) => /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(x.at))
+      .map((x) => ({
+        id: `hotel-${h.id}-${x.suffix}`,
+        hotelId: h.id,
+        date: x.at.slice(0, 10),
+        time: x.at.slice(11),
+        end: "",
+        name: `${h.name}：${x.action}`,
+        category: "Hotel",
+        place: h.address || h.city,
+        mapUrl: h.mapUrl,
+        memo: h.memo,
+        url: h.url,
+        done: false,
+        order: -1,
+      })),
+  );
   return {
     ...s,
     events: [
       ...regular,
+      ...hotelEvents,
       ...s.flights.map((f) => ({
         id: "flight-" + f.id,
         flightId: f.id,
