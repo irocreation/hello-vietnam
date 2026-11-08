@@ -246,8 +246,8 @@ function TripApp({ controller }: { controller: TripController }) {
         id: uid(),
         name: "",
         city: "ホーチミン",
-        checkin: startDate + "T15:00",
-        checkout: endDate + "T11:00",
+        checkin: "",
+        checkout: "",
         address: "",
         mapUrl: "",
         url: "",
@@ -287,7 +287,7 @@ function TripApp({ controller }: { controller: TripController }) {
       setError("緯度は−90〜90、経度は−180〜180で入力してください。");
       return;
     }
-    if (editor.kind === "hotels" && v.checkout <= v.checkin) {
+    if (editor.kind === "hotels" && v.checkin && v.checkout && v.checkout <= v.checkin) {
       setError("チェックアウトはチェックインより後の日時を選択してください。");
       return;
     }
@@ -1401,11 +1401,11 @@ function TripApp({ controller }: { controller: TripController }) {
                       <h3>{h.name}</h3>
                       <div className="hotel-dates">
                         <span>
-                          CHECK IN<b>{h.checkin.replace("T", " · ")}</b>
+                          CHECK IN<b>{h.checkin ? h.checkin.replace("T", " · ") : "未確認"}</b>
                         </span>
                         <ArrowRight size={16} />
                         <span>
-                          CHECK OUT<b>{h.checkout.replace("T", " · ")}</b>
+                          CHECK OUT<b>{h.checkout ? h.checkout.replace("T", " · ") : "未確認"}</b>
                         </span>
                       </div>
                       <p className="address">
@@ -1959,12 +1959,11 @@ function EditorFields({
       {kind === "hotels" && (
         <>
           {select("city", "宿泊都市", cities)}
-          {input("checkin", "チェックイン（現地時刻）", "datetime-local", true)}
+          {input("checkin", "チェックイン（現地時刻・任意）", "datetime-local")}
           {input(
             "checkout",
-            "チェックアウト（現地時刻）",
+            "チェックアウト（現地時刻・任意）",
             "datetime-local",
-            true,
           )}
           {input("address", "住所")}
           {input("mapUrl", "GoogleマップURL", "url")}
