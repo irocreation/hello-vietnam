@@ -1,34 +1,374 @@
-import {db,emptyState,overlay,scopeFor,toShared,uid,validateShared,type Identity,type Snapshot,type QueueItem,type SharedState,type State,type Document,type CheckRecord} from './data';
-export type RemoteState={document:Document;checks:CheckRecord[]};
-export type SaveResult={status:'ok'|'conflict';document?:Document;check?:CheckRecord};
-export interface Remote{verify():Promise<Identity>;fetch():Promise<RemoteState>;saveDocument(q:QueueItem):Promise<SaveResult>;saveCheck(q:QueueItem):Promise<SaveResult>}
-export type Conflict={key:string;kind:'shared'|'check';local:SharedState|boolean;remote:SharedState|boolean;remoteVersion:number;itemId?:string;missing?:boolean};
-export type SyncView={identity:Identity;data?:State;queueCount:number;lastSync:string|null;status:'synced'|'syncing'|'offline'|'error';error:string;conflict?:Conflict};
-export class SyncEngine{
- private closed=false;private running?:Promise<void>;private again=false;private listeners=new Set<()=>void>();private snapshot?:Snapshot;private queue:QueueItem[]=[];private scope:string;private view:SyncView;
- constructor(private identity:Identity,private remote:Remote,private isOnline=()=>navigator.onLine){this.scope=scopeFor(identity);this.view={identity,queueCount:0,lastSync:null,status:this.isOnline()?'syncing':'offline',error:''}}
- getSnapshot=()=>this.view;
- subscribe=(fn:()=>void)=>{this.listeners.add(fn);return()=>{this.listeners.delete(fn)}};
- private emit(patch:Partial<SyncView>={}){if(this.closed)return;this.view={...this.view,...patch,identity:this.identity,data:this.snapshot?overlay(this.snapshot,this.queue):undefined,queueCount:this.queue.length,lastSync:this.snapshot?.lastSync??null};this.listeners.forEach(fn=>fn())}
- async load(){this.snapshot=await db.snapshots.get(this.scope);this.queue=await db.queue.where('scope').equals(this.scope).toArray();this.emit();}
- private async ensureSnapshot(){if(this.snapshot)return;const snapshot:Snapshot={scope:this.scope,identity:this.identity,document:{payload:emptyState(),version:0,last_mutation:null},checks:[],lastSync:null};await db.snapshots.put(snapshot);this.snapshot=snapshot}
- async edit(next:State){if(this.identity.role!=='admin')throw new Error('共有情報を編集できるのは管理者だけです。');const payload=toShared(next);if(!validateShared(payload))throw new Error('入力データの形式またはURLを確認してください（HTTPSのみ対応）。');await this.ensureSnapshot();await db.transaction('rw',db.queue,db.snapshots,async()=>{if(this.closed)throw new Error('ログインし直してください。');const key=this.scope+':shared';const pending=await db.queue.get(key);const snapshot=await db.snapshots.get(this.scope);await db.queue.put({key,scope:this.scope,mutationId:uid(),kind:'shared',baseVersion:pending?.baseVersion??snapshot!.document.version,payload,createdAt:Date.now()})});await this.load();void this.sync();}
- async check(itemId:string,checked:boolean){await this.ensureSnapshot();if(!this.view.data?.packing.some(p=>p.id===itemId))throw new Error('持ち物が見つかりません。再同期してください。');await db.transaction('rw',db.queue,db.snapshots,async()=>{if(this.closed)throw new Error('ログインし直してください。');const key=this.scope+':check:'+itemId;const pending=await db.queue.get(key);const snapshot=await db.snapshots.get(this.scope);await db.queue.put({key,scope:this.scope,mutationId:uid(),kind:'check',itemId,baseVersion:pending?.baseVersion??snapshot?.checks.find(c=>c.item_id===itemId)?.version??0,payload:checked,createdAt:Date.now()})});await this.load();void this.sync();}
- setNetwork(){this.emit({status:this.isOnline()?this.view.status:'offline'});if(this.isOnline())void this.sync()}
- fail(message:string){this.emit({status:this.isOnline()?'error':'offline',error:message})}
- async retry(){this.emit({conflict:undefined,error:''});return this.sync()}
- sync():Promise<void>{if(this.closed)return Promise.resolve();if(!this.isOnline()){this.emit({status:'offline'});return Promise.resolve()}if(this.view.conflict)return Promise.resolve();if(this.running){this.again=true;return this.running}this.running=this.perform().finally(()=>{this.running=undefined});return this.running}
- private async persist(snapshot:Snapshot){if(this.closed)return;await db.transaction('rw',db.snapshots,async()=>{if(!this.closed)await db.snapshots.put(snapshot)});this.snapshot=snapshot}
- private async perform(){do{this.again=false;this.emit({status:'syncing',error:''});try{const verified=await this.remote.verify();if(verified.userId!==this.identity.userId||verified.tripId!==this.identity.tripId)throw new Error('ログイン中のユーザー・旅行グループが変わりました。ログインし直してください。');this.identity=verified;if(this.closed)return;const fresh=await this.remote.fetch();if(!validateShared(fresh.document.payload))throw new Error('サーバーのデータ形式を確認してください。');await this.persist({scope:this.scope,identity:verified,...fresh,lastSync:this.snapshot?.lastSync??null});await this.load();const pending=[...this.queue].sort((a,b)=>a.kind==='shared'?-1:b.kind==='shared'?1:a.createdAt-b.createdAt);
- for(const q of pending){if(this.closed||!this.isOnline())break;if(q.kind==='shared'&&verified.role!=='admin')throw new Error('管理者権限が確認できません。未送信の変更は端末に保持しています。');const latest=await db.queue.get(q.key);if(!latest||latest.mutationId!==q.mutationId){this.again=true;continue}if(q.kind==='check'&&!this.snapshot!.document.payload.packing.some(p=>p.id===q.itemId)){this.emit({status:'error',error:'持ち物が共有リストから削除されています。未送信のチェックを確認してください。',conflict:{key:q.key,kind:'check',local:q.payload as boolean,remote:false,remoteVersion:0,itemId:q.itemId,missing:true}});return}
- const result=q.kind==='shared'?await this.remote.saveDocument(q):await this.remote.saveCheck(q);if(this.closed)return;
- const current:Document|CheckRecord=q.kind==='shared'?result.document!:result.check!;if(!current)throw new Error('同期結果を確認できませんでした。変更は端末に保持しています。');if(q.kind==='shared'){this.snapshot={...this.snapshot!,document:current as Document}}else{const c=current as CheckRecord;this.snapshot={...this.snapshot!,checks:[...this.snapshot!.checks.filter(x=>x.item_id!==c.item_id),c]}}
- await this.persist(this.snapshot!);if(result.status==='conflict'){await this.load();this.emit({status:'error',error:'別の端末で更新されています。どちらを採用するか確認してください。',conflict:{key:q.key,kind:q.kind,local:q.payload,remote:q.kind==='shared'?(current as Document).payload:(current as CheckRecord).checked,remoteVersion:current.version,itemId:q.itemId}});return}
- await db.transaction('rw',db.queue,async()=>{if(this.closed)return;const now=await db.queue.get(q.key);if(now?.mutationId===q.mutationId)await db.queue.delete(q.key);else if(now){await db.queue.put({...now,baseVersion:current.version});this.again=true}});await this.load();
- }
- await this.load();if(this.queue.length&&!this.view.conflict)this.again=true;if(!this.queue.length)await this.persist({...this.snapshot!,lastSync:new Date().toISOString()});this.emit({status:this.isOnline()?(this.queue.length?'syncing':'synced'):'offline',error:''});
- }catch{this.emit({status:this.isOnline()?'error':'offline',error:'同期できませんでした。認証・所属・権限・接続を確認して再試行してください。未送信の変更は端末に保持しています。'});return}
- }while(this.again&&!this.closed&&this.isOnline()&&!this.view.conflict)}
- async resolve(choice:'local'|'remote'){const conflict=this.view.conflict;if(!conflict)return;if(choice==='local'&&conflict.missing)throw new Error('削除された持ち物のチェックは送信できません。');await db.transaction('rw',db.queue,async()=>{const q=await db.queue.get(conflict.key);if(!q)return;if(choice==='remote')await db.queue.delete(q.key);else await db.queue.put({...q,mutationId:uid(),baseVersion:conflict.remoteVersion})});await this.load();this.emit({conflict:undefined,error:''});await this.sync()}
- dispose(){this.closed=true;this.listeners.clear()}
+import {
+  db,
+  emptyState,
+  overlay,
+  scopeFor,
+  toShared,
+  uid,
+  validateShared,
+  type Identity,
+  type Snapshot,
+  type QueueItem,
+  type SharedState,
+  type State,
+  type Document,
+  type CheckRecord,
+} from "./data";
+export type RemoteState = { document: Document; checks: CheckRecord[] };
+export type SaveResult = {
+  status: "ok" | "conflict";
+  document?: Document;
+  check?: CheckRecord;
+};
+export interface Remote {
+  verify(): Promise<Identity>;
+  fetch(): Promise<RemoteState>;
+  saveDocument(q: QueueItem): Promise<SaveResult>;
+  saveCheck(q: QueueItem): Promise<SaveResult>;
+}
+export type Conflict = {
+  key: string;
+  kind: "shared" | "check";
+  local: SharedState | boolean;
+  remote: SharedState | boolean;
+  remoteVersion: number;
+  itemId?: string;
+  missing?: boolean;
+};
+export type SyncView = {
+  identity: Identity;
+  data?: State;
+  queueCount: number;
+  lastSync: string | null;
+  status: "synced" | "syncing" | "offline" | "error";
+  error: string;
+  conflict?: Conflict;
+};
+export class SyncEngine {
+  private closed = false;
+  private running?: Promise<void>;
+  private again = false;
+  private listeners = new Set<() => void>();
+  private snapshot?: Snapshot;
+  private queue: QueueItem[] = [];
+  private scope: string;
+  private view: SyncView;
+  constructor(
+    private identity: Identity,
+    private remote: Remote,
+    private isOnline = () => navigator.onLine,
+  ) {
+    this.scope = scopeFor(identity);
+    this.view = {
+      identity,
+      queueCount: 0,
+      lastSync: null,
+      status: this.isOnline() ? "syncing" : "offline",
+      error: "",
+    };
+  }
+  get active() { return !this.closed; }
+  getSnapshot = () => this.view;
+  subscribe = (fn: () => void) => {
+    this.listeners.add(fn);
+    return () => {
+      this.listeners.delete(fn);
+    };
+  };
+  private emit(patch: Partial<SyncView> = {}) {
+    if (this.closed) return;
+    this.view = {
+      ...this.view,
+      ...patch,
+      identity: this.identity,
+      data: this.snapshot ? overlay(this.snapshot, this.queue) : undefined,
+      queueCount: this.queue.length,
+      lastSync: this.snapshot?.lastSync ?? null,
+    };
+    this.listeners.forEach((fn) => fn());
+  }
+  async load() {
+    this.snapshot = await db.snapshots.get(this.scope);
+    this.queue = await db.queue.where("scope").equals(this.scope).toArray();
+    this.emit();
+  }
+  private async ensureSnapshot() {
+    if (this.snapshot) return;
+    const snapshot: Snapshot = {
+      scope: this.scope,
+      identity: this.identity,
+      document: { payload: emptyState(), version: 0, last_mutation: null },
+      checks: [],
+      lastSync: null,
+    };
+    await db.snapshots.put(snapshot);
+    this.snapshot = snapshot;
+  }
+  async edit(next: State) {
+    if (this.identity.role !== "admin")
+      throw new Error("共有情報を編集できるのは管理者だけです。");
+    const payload = toShared(next);
+    if (!validateShared(payload))
+      throw new Error(
+        "入力データの形式またはURLを確認してください（HTTPSのみ対応）。",
+      );
+    await this.ensureSnapshot();
+    await db.transaction("rw", db.queue, db.snapshots, async () => {
+      if (this.closed) throw new Error("ログインし直してください。");
+      const key = this.scope + ":shared";
+      const pending = await db.queue.get(key);
+      const snapshot = await db.snapshots.get(this.scope);
+      await db.queue.put({
+        key,
+        scope: this.scope,
+        mutationId: uid(),
+        kind: "shared",
+        baseVersion: pending?.baseVersion ?? snapshot!.document.version,
+        payload,
+        createdAt: Date.now(),
+      });
+    });
+    await this.load();
+    void this.sync();
+  }
+  async check(itemId: string, checked: boolean) {
+    await this.ensureSnapshot();
+    if (!this.view.data?.packing.some((p) => p.id === itemId))
+      throw new Error("持ち物が見つかりません。再同期してください。");
+    await db.transaction("rw", db.queue, db.snapshots, async () => {
+      if (this.closed) throw new Error("ログインし直してください。");
+      const key = this.scope + ":check:" + itemId;
+      const pending = await db.queue.get(key);
+      const snapshot = await db.snapshots.get(this.scope);
+      await db.queue.put({
+        key,
+        scope: this.scope,
+        mutationId: uid(),
+        kind: "check",
+        itemId,
+        baseVersion:
+          pending?.baseVersion ??
+          snapshot?.checks.find((c) => c.item_id === itemId)?.version ??
+          0,
+        payload: checked,
+        createdAt: Date.now(),
+      });
+    });
+    await this.load();
+    void this.sync();
+  }
+  setNetwork() {
+    this.emit({ status: this.isOnline() ? this.view.status : "offline" });
+    if (this.isOnline()) void this.sync();
+  }
+  fail(message: string) {
+    this.emit({
+      status: this.isOnline() ? "error" : "offline",
+      error: message,
+    });
+  }
+  async retry() {
+    this.emit({ conflict: undefined, error: "" });
+    return this.sync();
+  }
+  sync(): Promise<void> {
+    if (this.closed) return Promise.resolve();
+    if (!this.isOnline()) {
+      this.emit({ status: "offline" });
+      return Promise.resolve();
+    }
+    if (this.view.conflict) return Promise.resolve();
+    if (this.running) {
+      this.again = true;
+      return this.running;
+    }
+    this.running = this.perform().finally(() => {
+      this.running = undefined;
+    });
+    return this.running;
+  }
+  private async persist(snapshot: Snapshot) {
+    if (this.closed) return;
+    await db.transaction("rw", db.snapshots, async () => {
+      if (!this.closed) await db.snapshots.put(snapshot);
+    });
+    this.snapshot = snapshot;
+  }
+  private async perform() {
+    do {
+      this.again = false;
+      this.emit({ status: "syncing", error: "" });
+      try {
+        const verified = await this.remote.verify();
+        if (
+          verified.userId !== this.identity.userId ||
+          verified.tripId !== this.identity.tripId
+        )
+          throw new Error(
+            "ログイン中のユーザー・旅行グループが変わりました。ログインし直してください。",
+          );
+        this.identity = verified;
+        if (this.closed) return;
+        const fresh = await this.remote.fetch();
+        if (!validateShared(fresh.document.payload))
+          throw new Error("サーバーのデータ形式を確認してください。");
+        await this.persist({
+          scope: this.scope,
+          identity: verified,
+          ...fresh,
+          lastSync: this.snapshot?.lastSync ?? null,
+        });
+        await this.load();
+        const pending = [...this.queue].sort((a, b) =>
+          a.kind === "shared"
+            ? -1
+            : b.kind === "shared"
+              ? 1
+              : a.createdAt - b.createdAt,
+        );
+        for (const q of pending) {
+          if (this.closed || !this.isOnline()) break;
+          if (q.kind === "shared" && verified.role !== "admin")
+            throw new Error(
+              "管理者権限が確認できません。未送信の変更は端末に保持しています。",
+            );
+          const latest = await db.queue.get(q.key);
+          if (!latest || latest.mutationId !== q.mutationId) {
+            this.again = true;
+            continue;
+          }
+          if (
+            q.kind === "check" &&
+            !this.snapshot!.document.payload.packing.some(
+              (p) => p.id === q.itemId,
+            )
+          ) {
+            this.emit({
+              status: "error",
+              error:
+                "持ち物が共有リストから削除されています。未送信のチェックを確認してください。",
+              conflict: {
+                key: q.key,
+                kind: "check",
+                local: q.payload as boolean,
+                remote: false,
+                remoteVersion: 0,
+                itemId: q.itemId,
+                missing: true,
+              },
+            });
+            return;
+          }
+          const result =
+            q.kind === "shared"
+              ? await this.remote.saveDocument(q)
+              : await this.remote.saveCheck(q);
+          if (this.closed) return;
+          const current: Document | CheckRecord =
+            q.kind === "shared" ? result.document! : result.check!;
+          if (!current)
+            throw new Error(
+              "同期結果を確認できませんでした。変更は端末に保持しています。",
+            );
+          if (q.kind === "shared") {
+            this.snapshot = {
+              ...this.snapshot!,
+              document: current as Document,
+            };
+          } else {
+            const c = current as CheckRecord;
+            this.snapshot = {
+              ...this.snapshot!,
+              checks: [
+                ...this.snapshot!.checks.filter((x) => x.item_id !== c.item_id),
+                c,
+              ],
+            };
+          }
+          await this.persist(this.snapshot!);
+          if (result.status === "conflict") {
+            await this.load();
+            this.emit({
+              status: "error",
+              error:
+                "別の端末で更新されています。どちらを採用するか確認してください。",
+              conflict: {
+                key: q.key,
+                kind: q.kind,
+                local: q.payload,
+                remote:
+                  q.kind === "shared"
+                    ? (current as Document).payload
+                    : (current as CheckRecord).checked,
+                remoteVersion: current.version,
+                itemId: q.itemId,
+              },
+            });
+            return;
+          }
+          await db.transaction("rw", db.queue, async () => {
+            if (this.closed) return;
+            const now = await db.queue.get(q.key);
+            if (now?.mutationId === q.mutationId) await db.queue.delete(q.key);
+            else if (now) {
+              await db.queue.put({ ...now, baseVersion: current.version });
+              this.again = true;
+            }
+          });
+          await this.load();
+        }
+        await this.load();
+        if (this.queue.length && !this.view.conflict) this.again = true;
+        if (!this.queue.length)
+          await this.persist({
+            ...this.snapshot!,
+            lastSync: new Date().toISOString(),
+          });
+        this.emit({
+          status: this.isOnline()
+            ? this.queue.length
+              ? "syncing"
+              : "synced"
+            : "offline",
+          error: "",
+        });
+      } catch {
+        this.emit({
+          status: this.isOnline() ? "error" : "offline",
+          error:
+            "同期できませんでした。認証・所属・権限・接続を確認して再試行してください。未送信の変更は端末に保持しています。",
+        });
+        return;
+      }
+    } while (
+      this.again &&
+      !this.closed &&
+      this.isOnline() &&
+      !this.view.conflict
+    );
+  }
+  async resolve(choice: "local" | "remote") {
+    const conflict = this.view.conflict;
+    if (!conflict) return;
+    if (choice === "local" && conflict.missing)
+      throw new Error("削除された持ち物のチェックは送信できません。");
+    await db.transaction("rw", db.queue, async () => {
+      const q = await db.queue.get(conflict.key);
+      if (!q) return;
+      if (choice === "remote") await db.queue.delete(q.key);
+      else
+        await db.queue.put({
+          ...q,
+          mutationId: uid(),
+          baseVersion: conflict.remoteVersion,
+        });
+    });
+    await this.load();
+    this.emit({ conflict: undefined, error: "" });
+    await this.sync();
+  }
+  dispose() {
+    this.closed = true;
+    this.listeners.clear();
+  }
 }
