@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
-import { Camera, LoaderCircle, WifiOff } from "lucide-react";
+import { LoaderCircle, WifiOff } from "lucide-react";
 import { db, scopeFor, uid, type Identity } from "./data";
 import { supabase, verifiedIdentity } from "./supabase";
 const BUCKET = "place-photos";
@@ -169,12 +169,6 @@ export default function PlacePhoto({
         <span className="photo-busy" role="status">
           <LoaderCircle size={22} />
           写真を保存中…
-        </span>
-      )}
-      {admin && (
-        <span className="photo-hint">
-          <Camera size={14} />
-          {src ? "写真を変更" : "タップして写真を登録"}
         </span>
       )}
       {!admin && failed && path && (
