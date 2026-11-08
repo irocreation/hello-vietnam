@@ -52,6 +52,7 @@ import {
 } from "./data";
 import { TripProvider, type TripController } from "./TripProvider";
 import PlacePhoto from "./PlacePhoto";
+import { airportTime, airportZone, flightDuration } from "./flightTime";
 import { VietnamArt, Flower } from "./Art";
 type Tab = "Home" | "Schedule" | "Packing" | "Places" | "Info";
 type Editor = {
@@ -288,14 +289,11 @@ function TripApp({ controller }: { controller: TripController }) {
       return;
     }
     if (editor.kind === "flights") {
-      const offset = (airport: string) =>
-        airport.toUpperCase() === "NRT" ? "+09:00" : "+07:00";
-      if (
-        Date.parse(v.arrival + offset(v.to)) <=
-        Date.parse(v.departure + offset(v.from))
-      ) {
+      const departure = airportTime(v.departure, v.from),
+        arrival = airportTime(v.arrival, v.to);
+      if (departure !== null && arrival !== null && arrival <= departure) {
         setError(
-          "到着日時を確認してください（NRTは日本時間、その他はベトナム時間）。",
+          "到着日時を確認してください。各空港の現地時刻と時差で計算しています。",
         );
         return;
       }
@@ -370,11 +368,12 @@ function TripApp({ controller }: { controller: TripController }) {
     1 + Math.round((Date.parse(jstDay) - Date.parse(startDate)) / 86400000);
   const nextFlight = [...data.flights]
     .sort((a, b) => a.departure.localeCompare(b.departure))
-    .find(
-      (f) =>
-        Date.parse(f.departure + (f.from === "NRT" ? "+09:00" : "+07:00")) >
-        clock,
-    );
+    .find((f) => {
+      const departure = airportTime(f.departure, f.from);
+      return departure !== null
+        ? departure > clock
+        : f.departure.slice(0, 10) >= jstDay;
+    });
   const todayEvents = data.events
     .filter((e) => e.date === jstDay)
     .sort((a, b) => a.time.localeCompare(b.time));
@@ -674,8 +673,10 @@ function TripApp({ controller }: { controller: TripController }) {
                           </div>
                         </div>
                         <div className="flight-foot">
-                          <span>すべて現地時刻で表示</span>
-                          <Tag>LET’S FLY AWAY</Tag>
+                          <span className="compact-duration">
+                            所要 {flightDuration(nextFlight) || "未確認"}
+                          </span>
+                          <span>現地時刻</span>
                         </div>
                       </>
                     ) : (
@@ -1355,10 +1356,19 @@ function TripApp({ controller }: { controller: TripController }) {
                           at={f.departure}
                           label="出発"
                         />
-                        <div className="flight-path">
-                          <span />
-                          <Plane size={22} />
-                          <span />
+                        <div className="flight-connection">
+                          <div className="flight-path">
+                            <span />
+                            <Plane size={22} />
+                            <span />
+                          </div>
+                          <div
+                            className="flight-duration"
+                            title="各空港の時差を考慮した出発〜到着の時間です。乗継をまとめて登録した場合は待ち時間も含みます。"
+                          >
+                            <span>所要時間</span>
+                            <b>{flightDuration(f) || "未確認"}</b>
+                          </div>
                         </div>
                         <FlightEndpoint
                           airport={f.to}
@@ -1981,7 +1991,7 @@ function EditorFields({
           </div>
           {memo}
           <p className="help-text">
-            変更はスケジュールにも反映します。航空券はHTTPSの確認ページURLで管理します。ページの閲覧には接続が必要です。NRT以外の空港はベトナム時間として扱います。
+            変更はスケジュールにも反映します。航空券はHTTPSの確認ページURLで管理します。ページの閲覧には接続が必要です。出発・到着の各空港の現地時刻を入力してください。空港コードから時差を判定し、所要時間を計算します。未対応の空港は「所要時間：未確認」と表示します。
           </p>
         </>
       )}
@@ -2089,7 +2099,7 @@ function FlightEndpoint({
       <strong>{airport}</strong>
       <ReadableDateTime at={at} />
       <span className="airport-timezone">
-        {airport.toUpperCase() === "NRT" ? "日本時間" : "ベトナム時間"}
+        {airportZone(airport)?.label || "現地時刻（時差未確認）"}
       </span>
     </div>
   );
