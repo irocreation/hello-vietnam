@@ -1,3 +1,4 @@
+import type { MoneyCache, MoneyQueue } from "./moneyTypes";
 import Dexie, { type EntityTable } from "dexie";
 export const categories = [
   "Flight",
@@ -153,6 +154,8 @@ export const db = new Dexie("hello-vietnam-sync-v2") as Dexie & {
     { key: string; scope: string; path: string; blob: Blob },
     "key"
   >;
+  money: EntityTable<MoneyCache, "key">;
+  moneyQueue: EntityTable<MoneyQueue, "key">;
   snapshots: EntityTable<Snapshot, "scope">;
   queue: EntityTable<QueueItem, "key">;
   meta: EntityTable<{ key: string; value: unknown }, "key">;
@@ -163,6 +166,7 @@ db.version(1).stores({
   meta: "key",
 });
 db.version(2).stores({ photos: "key,scope,path" });
+db.version(3).stores({ money: "key,scope", moneyQueue: "key,scope" });
 export function toShared(s: State): SharedState {
   return {
     ...s,

@@ -308,5 +308,149 @@ test("PostgreSQL: RLS, two-member roles, independent checks, CAS and idempotency
       });
     },
   );
+  await pg.exec(
+    await readFile(
+      new URL(
+        "../supabase/migrations/003_personal_spending.sql",
+        import.meta.url,
+      ),
+      "utf8",
+    ),
+  );
+  const expenseId = "30000000-0000-4000-8000-000000000001";
+  const values = {
+    date: "2030-01-01",
+    amount: 100000,
+    name: "TEST meal",
+    category: "食事",
+    memo: "",
+    deleted: false,
+  };
+  const saveMoney = async (
+    kind: string,
+    id: string,
+    version: number,
+    payload: any = values,
+    mutation = crypto.randomUUID(),
+  ) =>
+    (
+      await pg.query<any>(
+        "select public.save_money_record($1,auth.uid(),$2,$3,$4,$5::jsonb,$6) as result",
+        [ids.trip, kind, id, version, JSON.stringify(payload), mutation],
+      )
+    ).rows[0].result;
+  await t.test(
+    "spending: both roles can write only their own records; no cross-user access",
+    async () => {
+      await as(ids.admin, async () => {
+        assert.equal((await saveMoney("expense", expenseId, 0)).status, "ok");
+      });
+      await as(ids.viewer, async () => {
+        assert.equal(
+          (await pg.query("select * from public.money_records")).rows.length,
+          0,
+        );
+        await saveMoney("expense", expenseId, 0, { ...values, amount: 50000 });
+        assert.equal(
+          (await pg.query<any>("select amount_vnd from public.money_records"))
+            .rows[0].amount_vnd,
+          50000,
+        );
+        assert.equal(
+          (
+            await pg.query(
+              "update public.money_records set amount_vnd=1 where user_id=$1 returning id",
+              [ids.admin],
+            )
+          ).rows.length,
+          0,
+        );
+        await assert.rejects(
+          pg.query("delete from public.money_records"),
+          /permission denied/,
+        );
+      });
+      await as(ids.admin, async () => {
+        assert.equal(
+          (await pg.query<any>("select amount_vnd from public.money_records"))
+            .rows[0].amount_vnd,
+          100000,
+        );
+      });
+      await as(ids.outsider, async () => {
+        assert.equal(
+          (await pg.query("select * from public.money_records")).rows.length,
+          0,
+        );
+        await assert.rejects(saveMoney("expense", expenseId, 0), /forbidden/);
+      });
+      await as(null, async () => {
+        await assert.rejects(
+          pg.query("select * from public.money_records"),
+          /permission denied/,
+        );
+      });
+    },
+  );
+  await t.test(
+    "spending CAS, reversible hiding, and private daily notes",
+    async () => {
+      await as(ids.viewer, async () => {
+        const mutation = crypto.randomUUID();
+        const first = await saveMoney(
+          "expense",
+          expenseId,
+          1,
+          { ...values, amount: 50000, deleted: true },
+          mutation,
+        );
+        assert.equal(first.record.deleted, true);
+        assert.equal(
+          (
+            await saveMoney(
+              "expense",
+              expenseId,
+              1,
+              { ...values, amount: 50000, deleted: true },
+              mutation,
+            )
+          ).record.version,
+          2,
+        );
+        assert.equal(
+          (await saveMoney("expense", expenseId, 1)).status,
+          "conflict",
+        );
+        await saveMoney("expense", expenseId, 2, { ...values, amount: 50000 });
+        assert.equal(
+          (
+            await saveMoney("day", "2030-01-01", 0, {
+              ...values,
+              amount: 0,
+              memo: "TEST daily memo",
+            })
+          ).status,
+          "ok",
+        );
+        await assert.rejects(
+          saveMoney("expense", crypto.randomUUID(), 0, {
+            ...values,
+            amount: -1,
+          }),
+          /check constraint/,
+        );
+      });
+      await as(ids.admin, async () => {
+        assert.equal(
+          (
+            await pg.query(
+              "select * from public.money_records where kind='day'",
+            )
+          ).rows.length,
+          0,
+        );
+      });
+    },
+  );
   await pg.close();
 });

@@ -46,6 +46,13 @@ export type SyncView = {
 };
 export class SyncEngine {
   private closed = false;
+  private disposeCallbacks = new Set<() => void>();
+  onDispose(callback: () => void) {
+    this.disposeCallbacks.add(callback);
+    return () => {
+      this.disposeCallbacks.delete(callback);
+    };
+  }
   private running?: Promise<void>;
   private again = false;
   private listeners = new Set<() => void>();
@@ -67,7 +74,9 @@ export class SyncEngine {
       error: "",
     };
   }
-  get active() { return !this.closed; }
+  get active() {
+    return !this.closed;
+  }
   getSnapshot = () => this.view;
   subscribe = (fn: () => void) => {
     this.listeners.add(fn);
@@ -369,6 +378,8 @@ export class SyncEngine {
   }
   dispose() {
     this.closed = true;
+    this.disposeCallbacks.forEach((callback) => callback());
+    this.disposeCallbacks.clear();
     this.listeners.clear();
   }
 }

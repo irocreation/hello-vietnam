@@ -1,11 +1,14 @@
 import {
   useEffect,
+  useMemo,
   useRef,
   useState,
   useSyncExternalStore,
   type ReactNode,
 } from "react";
 import Dexie from "dexie";
+import { MoneyEngine } from "./moneyEngine";
+import { moneyRemote } from "./moneyRemote";
 import {
   LogIn,
   LockKeyhole,
@@ -24,6 +27,7 @@ import { SyncEngine, type SyncView } from "./sync";
 import { VietnamArt, Flower } from "./Art";
 export type TripController = {
   engine: SyncEngine;
+  money: MoneyEngine;
   view: SyncView;
   logout: () => Promise<void>;
 };
@@ -83,12 +87,14 @@ export function TripProvider({
       setEngine(undefined);
       await db.transaction(
         "rw",
-        [db.snapshots, db.queue, db.meta, db.photos],
+        [db.snapshots, db.queue, db.meta, db.photos, db.money, db.moneyQueue],
         async () => {
           await db.snapshots.clear();
           await db.queue.clear();
           await db.meta.clear();
           await db.photos.clear();
+          await db.money.clear();
+          await db.moneyQueue.clear();
         },
       );
       await Dexie.delete("hello-vietnam-v1");
@@ -234,12 +240,14 @@ export function TripProvider({
     setEngine(undefined);
     await db.transaction(
       "rw",
-      [db.snapshots, db.queue, db.meta, db.photos],
+      [db.snapshots, db.queue, db.meta, db.photos, db.money, db.moneyQueue],
       async () => {
         await db.snapshots.clear();
         await db.queue.clear();
         await db.meta.clear();
         await db.photos.clear();
+        await db.money.clear();
+        await db.moneyQueue.clear();
       },
     );
     await Dexie.delete("hello-vietnam-v1");
@@ -369,11 +377,37 @@ function Connected({
   children: (c: TripController) => ReactNode;
 }) {
   const view = useSyncExternalStore(engine.subscribe, engine.getSnapshot);
+  const money = useMemo(
+    () => new MoneyEngine(view.identity, moneyRemote(view.identity)),
+    [engine],
+  );
+  useEffect(() => {
+    if (!engine.active) {
+      money.dispose();
+      return;
+    }
+    money.resume();
+    const unregister = engine.onDispose(() => money.dispose());
+    void money
+      .load()
+      .then(() => money.sync())
+      .catch(() => money.fail());
+    const network = () => money.network();
+    window.addEventListener("online", network);
+    window.addEventListener("offline", network);
+    return () => {
+      unregister();
+      money.dispose();
+      window.removeEventListener("online", network);
+      window.removeEventListener("offline", network);
+    };
+  }, [engine, money]);
   useEffect(() => {
     const i = view.identity;
     const client = supabase!;
     const refresh = () => {
       void engine.sync();
+      void money.sync();
     };
     const visibility = () => {
       if (document.visibilityState === "visible") refresh();
@@ -410,6 +444,18 @@ function Connected({
         },
         refresh,
       )
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "money_records",
+          filter: `user_id=eq.${i.userId}`,
+        },
+        () => {
+          void money.sync();
+        },
+      )
       .subscribe((status) => {
         if (status === "SUBSCRIBED") refresh();
         if (status === "CHANNEL_ERROR" || status === "TIMED_OUT")
@@ -424,7 +470,7 @@ function Connected({
       window.removeEventListener("focus", refresh);
       document.removeEventListener("visibilitychange", visibility);
     };
-  }, [engine]);
+  }, [engine, money]);
   if (!view.data)
     return (
       <div className="loading">
@@ -440,5 +486,13 @@ function Connected({
         </button>
       </div>
     );
-  return children({ engine, view, logout });
+  return children({
+    engine,
+    money,
+    view,
+    logout: async () => {
+      money.dispose();
+      await logout();
+    },
+  });
 }

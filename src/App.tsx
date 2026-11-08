@@ -1,4 +1,10 @@
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import {
+  useEffect,
+  useRef,
+  useState,
+  useSyncExternalStore,
+  type ReactNode,
+} from "react";
 import {
   Home,
   CalendarDays,
@@ -52,6 +58,7 @@ import {
 } from "./data";
 import { TripProvider, type TripController } from "./TripProvider";
 import PlacePhoto from "./PlacePhoto";
+import MoneyPanel from "./MoneyPanel";
 import { airportTime, airportZone, flightDuration } from "./flightTime";
 import { VietnamArt, Flower } from "./Art";
 type Tab = "Home" | "Schedule" | "Packing" | "Places" | "Info";
@@ -95,7 +102,8 @@ export default function App() {
   );
 }
 function TripApp({ controller }: { controller: TripController }) {
-  const { engine, view, logout } = controller;
+  const { engine, money, view, logout } = controller;
+  const moneyView = useSyncExternalStore(money.subscribe, money.getSnapshot);
   const data = view.data!;
   const isAdmin = view.identity.role === "admin";
   const startDate = view.identity.startDate;
@@ -118,10 +126,21 @@ function TripApp({ controller }: { controller: TripController }) {
   dataRef.current = data;
   const [tab, setTab] = useState<Tab>("Home");
   const [online, setOnline] = useState(navigator.onLine);
+  const pendingCount = view.queueCount + moneyView.queueCount;
+  const overallStatus = !online
+    ? "offline"
+    : view.status === "error" || moneyView.status === "error"
+      ? "error"
+      : view.status === "syncing" || moneyView.status === "syncing"
+        ? "syncing"
+        : "synced";
+  const syncError = view.error || moneyView.error;
+
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
   const [editor, setEditor] = useState<Editor>();
   const [settings, setSettings] = useState(false);
+  const [walletOpen, setWalletOpen] = useState(false);
   const [day, setDay] = useState(startDate);
   const [pendingOnly, setPendingOnly] = useState(false);
   const [city, setCity] = useState("すべて");
@@ -473,22 +492,22 @@ function TripApp({ controller }: { controller: TripController }) {
             </span>
             {!isAdmin && <span className="viewer-pill">閲覧者</span>}
             <div
-              className={`connection ${view.status === "offline" || view.status === "error" ? "offline" : ""}`}
+              className={`connection ${overallStatus === "offline" || overallStatus === "error" ? "offline" : ""}`}
             >
               {online ? <Wifi size={13} /> : <WifiOff size={13} />}
               <button className="sync-badge" onClick={() => setSettings(true)}>
-                {view.status === "synced"
+                {overallStatus === "synced"
                   ? "同期済み"
-                  : view.status === "syncing"
+                  : overallStatus === "syncing"
                     ? "同期中"
-                    : view.status === "offline"
+                    : overallStatus === "offline"
                       ? "オフライン"
                       : "同期エラー"}
               </button>
               <span className="save-state">
-                {view.queueCount
-                  ? `未送信 ${view.queueCount}`
-                  : view.status === "synced"
+                {pendingCount
+                  ? `未送信 ${pendingCount}`
+                  : overallStatus === "synced"
                     ? "同期済み"
                     : "端末に保存"}
               </span>
@@ -502,12 +521,12 @@ function TripApp({ controller }: { controller: TripController }) {
             </button>
           </header>
           <main key={tab}>
-            {(view.status === "error" || view.queueCount > 0) && (
+            {(overallStatus === "error" || pendingCount > 0) && (
               <div className="sync-warning" role="status">
                 <span>
-                  {view.status === "error"
-                    ? view.error
-                    : `未送信の変更 ${view.queueCount}件。${online ? "同期を待っています。" : "端末に保存しています。再接続後に送信します。"}`}
+                  {overallStatus === "error"
+                    ? syncError
+                    : `未送信の変更 ${pendingCount}件。${online ? "同期を待っています。" : "端末に保存しています。再接続後に送信します。"}`}
                 </span>
                 <button onClick={() => setSettings(true)}>同期を確認</button>
               </div>
@@ -718,6 +737,17 @@ function TripApp({ controller }: { controller: TripController }) {
                     </button>
                   </section>
                 </div>
+                <button
+                  className="wallet-shortcut"
+                  onClick={() => setWalletOpen(true)}
+                >
+                  <span className="wallet-shortcut-mark">₫ → ¥</span>
+                  <span>
+                    <b>今日は、いくら使った？</b>
+                    <small>円換算と、自分だけのおこづかい帳</small>
+                  </span>
+                  <ArrowUpRight size={22} />
+                </button>
                 <section className="home-lower">
                   <div className="today-section">
                     <div className="section-heading">
@@ -1313,6 +1343,7 @@ function TripApp({ controller }: { controller: TripController }) {
                   "Travel essentials",
                   "フライトも、予約も。大切な情報をひとつに。",
                 )}
+                <MoneyPanel engine={money} />
                 <div className="section-heading info-heading">
                   <h2>
                     <Plane size={22} />
@@ -1587,6 +1618,13 @@ function TripApp({ controller }: { controller: TripController }) {
           </button>
         </div>
       )}
+      {walletOpen && (
+        <Modal title="旅のおこづかい帳" close={() => setWalletOpen(false)}>
+          <div className="wallet-modal">
+            <MoneyPanel engine={money} />
+          </div>
+        </Modal>
+      )}
       {editor && (
         <Modal
           title={
@@ -1651,11 +1689,11 @@ function TripApp({ controller }: { controller: TripController }) {
             </div>
             <div className="sync-detail">
               <b>
-                {view.status === "synced"
+                {overallStatus === "synced"
                   ? "同期済み"
-                  : view.status === "syncing"
+                  : overallStatus === "syncing"
                     ? "同期中"
-                    : view.status === "offline"
+                    : overallStatus === "offline"
                       ? "オフライン"
                       : "同期エラー"}
               </b>
@@ -1667,13 +1705,16 @@ function TripApp({ controller }: { controller: TripController }) {
                     }) + "（日本時間）"
                   : "まだ同期していません"}
                 <br />
-                未送信の変更：{view.queueCount}件
+                未送信の変更：{pendingCount}件
               </p>
-              {view.error && <p role="alert">{view.error}</p>}
+              {syncError && <p role="alert">{syncError}</p>}
               <button
                 className="secondary"
-                disabled={!online || view.status === "syncing"}
-                onClick={() => engine.retry()}
+                disabled={!online || overallStatus === "syncing"}
+                onClick={() => {
+                  void engine.retry();
+                  void money.retry();
+                }}
               >
                 再同期する
               </button>
@@ -1694,8 +1735,8 @@ function TripApp({ controller }: { controller: TripController }) {
               className="danger text-button"
               onClick={() =>
                 setConfirmAction({
-                  title: view.queueCount
-                    ? `未送信の変更が${view.queueCount}件あります。ログアウトすると端末内の旅行情報・未送信の変更を削除します。続けますか？`
+                  title: pendingCount
+                    ? `未送信の変更が${pendingCount}件あります。ログアウトすると端末内の旅行情報・未送信の変更を削除します。続けますか？`
                     : "ログアウトし、端末内の旅行情報を削除しますか？",
                   run: () => {
                     void logout().catch(() =>

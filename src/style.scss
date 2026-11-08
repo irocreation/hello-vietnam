@@ -4082,3 +4082,752 @@ label.place-photo.is-busy {
     font-size: 8px;
   }
 }
+
+.wallet-shortcut {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  border: 1px solid #dce4d4;
+  background: #edf2e4;
+  border-radius: 11px;
+  padding: 20px 23px;
+  text-align: left;
+  margin-top: 23px;
+}
+.wallet-shortcut-mark {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #3d8b75;
+  color: #fff8ed;
+  border-radius: 50%;
+  width: 51px;
+  height: 51px;
+  font-family: "Outfit", sans-serif;
+  font-size: 17px;
+  font-weight: 600;
+  flex-shrink: 0;
+}
+.wallet-shortcut > span:nth-child(2) {
+  flex: 1;
+}
+.wallet-shortcut b {
+  display: block;
+  font-size: 14px;
+  font-weight: 500;
+}
+.wallet-shortcut small {
+  display: block;
+  font-size: 10px;
+  color: #8b9279;
+  margin-top: 6px;
+}
+.wallet-shortcut > svg {
+  color: #3d8b75;
+}
+.money-panel {
+  border: 1px solid #dfdfcb;
+  background: #fffbf5;
+  border-radius: 13px;
+  padding: 27px;
+  margin: 25px 0 35px;
+  min-width: 0;
+}
+.wallet-heading {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  margin-bottom: 23px;
+}
+.wallet-symbol {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 51px;
+  height: 51px;
+  border-radius: 50%;
+  background: #e3eee1;
+  color: #3d8b75;
+  flex-shrink: 0;
+}
+.wallet-heading h2 {
+  font-family: "Noto Sans JP", sans-serif;
+  font-size: 20px;
+  font-weight: 600;
+  margin: 7px 0 5px;
+  letter-spacing: -0.5px;
+}
+.wallet-heading .eyebrow {
+  font-size: 8px;
+  letter-spacing: 1.4px;
+}
+.wallet-heading p {
+  font-size: 10px;
+  color: #95816a;
+  line-height: 1.8;
+}
+.wallet-date {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 13px 0;
+  border-top: 1px solid #e8dfd1;
+}
+.wallet-date > label {
+  position: relative;
+  font-size: 15px;
+  font-weight: 500;
+  min-height: 42px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 145px;
+}
+.wallet-date > label input {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  opacity: 0;
+  cursor: pointer;
+}
+.wallet-date > label:has(input:focus-visible) {
+  outline: 3px solid #3d8b75;
+  border-radius: 6px;
+}
+.today-button {
+  margin-left: auto;
+  background: #eee7d8;
+  border-radius: 20px;
+  font-size: 11px;
+  padding: 8px 18px;
+  min-height: 38px;
+}
+.wallet-summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 22px;
+  padding: 25px 27px;
+  background: #3d8b75;
+  color: #fff8ed;
+  border-radius: 11px;
+  margin: 6px 0 17px;
+}
+.wallet-summary > div {
+  min-width: 0;
+}
+.wallet-summary-label {
+  font-size: 11px;
+  color: #e0eadb;
+}
+.wallet-summary strong {
+  font-family: "Outfit", sans-serif;
+  display: block;
+  font-size: 42px;
+  font-weight: 600;
+  letter-spacing: -1.2px;
+  line-height: 1.2;
+  margin: 11px 0 8px;
+  overflow-wrap: anywhere;
+}
+.wallet-summary strong > small {
+  font-size: 20px;
+  margin-left: 8px;
+  font-weight: 400;
+}
+.wallet-count {
+  font-size: 10px;
+  color: #c9ddca;
+}
+.wallet-yen {
+  text-align: right;
+}
+.wallet-yen > span {
+  font-size: 10px;
+  color: #d5e5d5;
+  display: block;
+}
+.wallet-yen b {
+  font-family: "Outfit", "Noto Sans JP", sans-serif;
+  font-size: 29px;
+  font-weight: 500;
+  display: block;
+  letter-spacing: -0.7px;
+  margin: 10px 0;
+  overflow-wrap: anywhere;
+}
+.wallet-yen > small {
+  font-size: 8px;
+  color: #bdd7c3;
+  display: block;
+}
+.wallet-rate {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: #a18b68;
+}
+.wallet-rate > div {
+  flex: 1;
+  min-width: 0;
+}
+.wallet-rate b {
+  font-size: 12px;
+  color: #716047;
+  font-weight: 500;
+  display: block;
+}
+.wallet-rate span {
+  font-size: 9px;
+  display: block;
+  margin-top: 5px;
+  line-height: 1.7;
+}
+.rate-settings {
+  margin: 10px 0 25px;
+  font-size: 10px;
+  color: #9a8261;
+}
+.rate-settings summary {
+  cursor: pointer;
+  padding: 7px 0;
+  min-height: 33px;
+  width: max-content;
+}
+.rate-settings p {
+  font-size: 10px;
+  margin: 8px 0 12px;
+}
+.rate-settings form {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.rate-settings form label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+.rate-settings input {
+  width: 110px;
+  min-height: 42px;
+  border: 1px solid #d9cbb6;
+  border-radius: 6px;
+  background: #fff8ed;
+  padding: 8px;
+  font-size: 16px;
+}
+.rate-settings .secondary {
+  font-size: 10px;
+}
+.rate-settings > a {
+  display: inline-block;
+  margin-left: 18px;
+  color: #8a957b;
+  font-size: 9px;
+}
+.wallet-message {
+  font-size: 10px;
+  color: #ad7743;
+  line-height: 1.8;
+  margin-bottom: 18px;
+}
+.expense-form {
+  padding: 22px;
+  background: #f7eedb;
+  border: 1px solid #eadfc7;
+  border-radius: 10px;
+}
+.expense-form h3 {
+  font-family: "Noto Sans JP", sans-serif;
+  font-size: 13px;
+  font-weight: 500;
+}
+.wallet-amount {
+  display: block;
+  margin-top: 22px;
+}
+.wallet-amount > span {
+  font-size: 10px;
+  color: #927b5b;
+}
+.wallet-amount > div {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  border-bottom: 1px solid #caba9e;
+  margin-top: 9px;
+  padding-bottom: 10px;
+}
+.wallet-amount input {
+  width: 0;
+  flex: 1;
+  min-width: 0;
+  background: transparent;
+  border: 0;
+  font-family: "Outfit", sans-serif;
+  font-size: 38px;
+  outline: none;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -1px;
+  color: #43362e;
+}
+.wallet-amount > div > b {
+  font-size: 12px;
+  letter-spacing: 1px;
+  color: #9a8261;
+}
+.wallet-converted {
+  display: flex;
+  align-items: baseline;
+  justify-content: flex-end;
+  gap: 9px;
+  font-size: 11px;
+  color: #9f8868;
+  margin-top: 14px;
+}
+.wallet-converted strong {
+  font-family: "Outfit", "Noto Sans JP", sans-serif;
+  font-size: 23px;
+  font-weight: 500;
+  color: #3d8b75;
+  overflow-wrap: anywhere;
+}
+.amount-presets {
+  display: flex;
+  gap: 7px;
+  flex-wrap: wrap;
+  margin-top: 20px;
+}
+.amount-presets button {
+  padding: 8px 12px;
+  background: #fff8ed;
+  border: 1px solid #e4d5ba;
+  border-radius: 30px;
+  font-size: 10px;
+  min-height: 37px;
+  flex: 1;
+  white-space: nowrap;
+}
+.expense-fields {
+  display: grid;
+  grid-template-columns: 1.7fr 1fr;
+  gap: 13px;
+  margin: 23px 0 18px;
+}
+.expense-fields .field input,
+.expense-fields .field select {
+  font-size: 14px;
+}
+.expense-form > .primary {
+  width: 100%;
+}
+.wallet-hint {
+  font-size: 9px;
+  text-align: center;
+  color: #9e8b6e;
+  margin-top: 11px;
+}
+.expense-history {
+  margin-top: 28px;
+}
+.expense-history h3,
+.day-memo h3 {
+  font-family: "Noto Sans JP", sans-serif;
+  font-size: 14px;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+.wallet-sync {
+  font-size: 9px;
+  color: #3d8b75;
+  line-height: 1.8;
+  text-align: right;
+}
+.wallet-sync.error {
+  color: #b75a41;
+}
+.wallet-sync.offline {
+  color: #a68855;
+}
+.wallet-empty {
+  font-size: 11px;
+  color: #a28e70;
+  padding: 24px 0;
+}
+.expense-history ul {
+  list-style: none;
+  padding: 0;
+  margin: 15px 0 0;
+}
+.expense-history li {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  border-top: 1px solid #e8dfd1;
+  padding: 11px 0;
+  min-width: 0;
+}
+.expense-category {
+  font-size: 8px;
+  background: #efe6d5;
+  padding: 6px 8px;
+  border-radius: 5px;
+  white-space: nowrap;
+  color: #967e5b;
+}
+.expense-history li > div {
+  flex: 1;
+  min-width: 0;
+}
+.expense-history li > div > b {
+  font-size: 12px;
+  font-weight: 500;
+  overflow-wrap: anywhere;
+}
+.expense-history li > div > small {
+  display: block;
+  color: #9f8b6d;
+  font-size: 10px;
+  margin-top: 5px;
+}
+.expense-history li > strong {
+  font-size: 15px;
+  font-family: "Outfit", sans-serif;
+  font-weight: 500;
+  text-align: right;
+}
+.expense-history li > strong > small {
+  font-size: 10px;
+  color: #a18d6f;
+  font-weight: 400;
+}
+.expense-history .icon-button {
+  min-width: 35px;
+  min-height: 40px;
+}
+.undo-expense {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 10px;
+  color: #3d8b75;
+  min-height: 40px;
+  overflow-wrap: anywhere;
+  text-align: left;
+}
+.day-memo {
+  border-top: 1px solid #e8dfd1;
+  margin-top: 24px;
+  padding-top: 22px;
+}
+.day-memo .field {
+  margin: 17px 0 12px;
+}
+.day-memo .field > span {
+  font-size: 9px;
+  color: #9d876a;
+}
+.day-memo textarea {
+  font-size: 13px;
+}
+.day-memo > .secondary {
+  font-size: 11px;
+  gap: 7px;
+}
+.wallet-error {
+  background: #fae7dc;
+  padding: 15px;
+  border-radius: 7px;
+  font-size: 11px;
+  color: #a64f34;
+  margin-top: 20px;
+}
+.wallet-error > button {
+  font-size: 11px;
+  text-decoration: underline;
+  min-height: 38px;
+}
+.wallet-feedback {
+  font-size: 10px;
+  color: #3d8b75;
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  margin-top: 18px;
+  line-height: 1.9;
+}
+.wallet-feedback > svg {
+  margin-top: 3px;
+}
+.wallet-footnote {
+  font-size: 9px;
+  color: #a28d6e;
+  margin-top: 20px;
+  line-height: 1.9;
+}
+.money-conflict {
+  background: #fae5d7;
+  padding: 20px;
+  border: 1px solid #ebc8af;
+  border-radius: 10px;
+  margin-top: 20px;
+}
+.money-conflict > h3 {
+  font-size: 13px;
+}
+.money-conflict > div {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+  margin: 15px 0;
+}
+.money-conflict section {
+  min-width: 0;
+  font-size: 11px;
+}
+.money-conflict section > b {
+  font-size: 11px;
+}
+.money-conflict p {
+  font-size: 10px;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.money-conflict > .secondary,
+.money-conflict > .primary {
+  font-size: 10px;
+  margin-right: 7px;
+}
+.wallet-modal {
+  padding: 0 20px;
+}
+.wallet-modal .money-panel {
+  border: 0;
+  padding: 15px 0 10px;
+  margin: 0;
+}
+.spinning {
+  animation: spin 1.4s linear infinite;
+}
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@media (max-width: 600px) {
+  .wallet-shortcut {
+    padding: 17px 18px;
+    gap: 13px;
+    margin-top: 18px;
+  }
+  .wallet-shortcut-mark {
+    width: 43px;
+    height: 43px;
+    font-size: 15px;
+  }
+  .wallet-shortcut b {
+    font-size: 12px;
+  }
+  .wallet-shortcut small {
+    font-size: 9px;
+    line-height: 1.8;
+  }
+  .money-panel {
+    padding: 20px 17px;
+    margin: 20px 0 30px;
+  }
+  .wallet-heading {
+    gap: 11px;
+    margin-bottom: 20px;
+  }
+  .wallet-symbol {
+    width: 40px;
+    height: 40px;
+  }
+  .wallet-symbol > svg {
+    width: 21px;
+  }
+  .wallet-heading .eyebrow {
+    font-size: 6px;
+    letter-spacing: 1px;
+  }
+  .wallet-heading h2 {
+    font-size: 17px;
+    margin: 6px 0;
+  }
+  .wallet-heading p {
+    font-size: 9px;
+  }
+  .wallet-date {
+    gap: 3px;
+  }
+  .wallet-date > label {
+    font-size: 13px;
+    min-width: 0;
+    flex: 1;
+  }
+  .wallet-date .icon-button {
+    min-width: 34px;
+  }
+  .today-button {
+    font-size: 10px;
+    padding: 8px 13px;
+  }
+  .wallet-summary {
+    padding: 21px 17px;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+  .wallet-summary strong {
+    font-size: 35px;
+  }
+  .wallet-summary-label {
+    font-size: 10px;
+  }
+  .wallet-count {
+    font-size: 9px;
+  }
+  .wallet-yen b {
+    font-size: 25px;
+    margin: 8px 0;
+  }
+  .wallet-yen > span {
+    font-size: 9px;
+  }
+  .wallet-yen > small {
+    font-size: 7px;
+  }
+  .wallet-rate b {
+    font-size: 11px;
+  }
+  .wallet-rate span {
+    font-size: 8px;
+  }
+  .wallet-rate {
+    gap: 8px;
+  }
+  .wallet-rate .icon-button {
+    min-width: 36px;
+  }
+  .rate-settings {
+    font-size: 9px;
+  }
+  .rate-settings p {
+    font-size: 9px;
+  }
+  .rate-settings form {
+    gap: 8px;
+  }
+  .rate-settings input {
+    width: 100px;
+  }
+  .rate-settings > a {
+    margin-left: 12px;
+    font-size: 8px;
+  }
+  .expense-form {
+    padding: 20px 15px;
+  }
+  .expense-form h3 {
+    font-size: 12px;
+    line-height: 1.7;
+  }
+  .wallet-amount input {
+    font-size: 34px;
+  }
+  .wallet-amount > div > b {
+    font-size: 11px;
+  }
+  .wallet-converted strong {
+    font-size: 22px;
+  }
+  .wallet-converted {
+    font-size: 10px;
+  }
+  .amount-presets {
+    gap: 6px;
+    margin-top: 17px;
+  }
+  .amount-presets button {
+    font-size: 9px;
+    padding: 8px;
+    flex: 1 1 40%;
+  }
+  .expense-fields {
+    grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr);
+    gap: 10px;
+    margin-top: 20px;
+  }
+  .expense-fields .field input,
+  .expense-fields .field select {
+    font-size: 16px;
+    min-height: 44px;
+    padding: 10px;
+  }
+  .expense-form > .primary {
+    font-size: 12px;
+  }
+  .wallet-hint {
+    font-size: 8px;
+    line-height: 1.8;
+  }
+  .expense-history h3,
+  .day-memo h3 {
+    font-size: 13px;
+  }
+  .expense-history li {
+    gap: 6px;
+    flex-wrap: wrap;
+  }
+  .expense-category {
+    font-size: 7px;
+    padding: 5px 6px;
+  }
+  .expense-history li > div > b {
+    font-size: 11px;
+  }
+  .expense-history li > div > small {
+    font-size: 9px;
+  }
+  .expense-history li > strong {
+    font-size: 14px;
+  }
+  .expense-history .icon-button {
+    min-width: 30px;
+    min-height: 40px;
+  }
+  .wallet-sync {
+    font-size: 8px;
+  }
+  .wallet-empty {
+    font-size: 10px;
+  }
+  .day-memo textarea {
+    font-size: 16px;
+  }
+  .wallet-footnote {
+    font-size: 8px;
+  }
+  .wallet-modal {
+    padding: 0 19px;
+  }
+  .wallet-modal .wallet-heading h2 {
+    font-size: 18px;
+  }
+  .wallet-summary > div:first-child {
+    flex: 1;
+    min-width: 100px;
+  }
+  .money-conflict {
+    padding: 16px;
+  }
+  .money-conflict > h3 {
+    font-size: 12px;
+  }
+}
