@@ -1350,19 +1350,21 @@ function TripApp({ controller }: { controller: TripController }) {
                         )}
                       </div>
                       <div className="flight-route">
-                        <div>
-                          <strong>{f.from}</strong>
-                          <span>{f.departure.replace("T", " · ")}</span>
-                        </div>
+                        <FlightEndpoint
+                          airport={f.from}
+                          at={f.departure}
+                          label="出発"
+                        />
                         <div className="flight-path">
                           <span />
                           <Plane size={22} />
                           <span />
                         </div>
-                        <div>
-                          <strong>{f.to}</strong>
-                          <span>{f.arrival.replace("T", " · ")}</span>
-                        </div>
+                        <FlightEndpoint
+                          airport={f.to}
+                          at={f.arrival}
+                          label="到着"
+                        />
                       </div>
                       <div className="flight-details">
                         <span>予約番号：{f.booking || "未登録"}</span>
@@ -1429,23 +1431,15 @@ function TripApp({ controller }: { controller: TripController }) {
                       </div>
                       <h3>{h.name}</h3>
                       <div className="hotel-dates">
-                        <span>
-                          CHECK IN
-                          <b>
-                            {h.checkin
-                              ? h.checkin.replace("T", " · ")
-                              : "未確認"}
-                          </b>
-                        </span>
-                        <ArrowRight size={16} />
-                        <span>
-                          CHECK OUT
-                          <b>
-                            {h.checkout
-                              ? h.checkout.replace("T", " · ")
-                              : "未確認"}
-                          </b>
-                        </span>
+                        <div className="stay-datetime">
+                          <span className="stay-label">チェックイン</span>
+                          <ReadableDateTime at={h.checkin} />
+                        </div>
+                        <ArrowRight size={18} />
+                        <div className="stay-datetime">
+                          <span className="stay-label">チェックアウト</span>
+                          <ReadableDateTime at={h.checkout} />
+                        </div>
                       </div>
                       <p className="address">
                         <MapPin size={14} />
@@ -2061,6 +2055,42 @@ function SharedSummary({ data }: { data: SharedState }) {
           ))}
         </details>
       ))}
+    </div>
+  );
+}
+
+function ReadableDateTime({ at }: { at: string }) {
+  if (!at) return <span className="datetime-unknown">未確認</span>;
+  const date = at.slice(0, 10);
+  const weekday = new Date(date + "T00:00:00Z").toLocaleDateString("ja-JP", {
+    weekday: "long",
+    timeZone: "UTC",
+  });
+  return (
+    <time className="readable-datetime" dateTime={at}>
+      <b className="readable-time">{at.slice(11, 16)}</b>
+      <span className="readable-date">{date.replaceAll("-", ".")}</span>
+      <span className="readable-weekday">{weekday}</span>
+    </time>
+  );
+}
+function FlightEndpoint({
+  airport,
+  at,
+  label,
+}: {
+  airport: string;
+  at: string;
+  label: string;
+}) {
+  return (
+    <div className="flight-endpoint">
+      <span className="flight-direction">{label}</span>
+      <strong>{airport}</strong>
+      <ReadableDateTime at={at} />
+      <span className="airport-timezone">
+        {airport.toUpperCase() === "NRT" ? "日本時間" : "ベトナム時間"}
+      </span>
     </div>
   );
 }

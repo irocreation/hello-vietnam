@@ -3837,3 +3837,176 @@ label.place-photo.is-busy {
   left: 12px;
   transform: none;
 }
+
+// Essential dates and times remain legible at mobile sizes.
+.readable-datetime {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  font-family: "Outfit", "Noto Sans JP", sans-serif;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.2;
+}
+.full-flight .flight-route {
+  max-width: 660px;
+  align-items: flex-start;
+  margin: 27px auto;
+}
+.full-flight .flight-endpoint {
+  min-width: 0;
+  gap: 6px;
+}
+.full-flight .flight-endpoint .flight-direction {
+  font-size: 12px;
+  color: #85715a;
+  letter-spacing: 1px;
+  margin-bottom: 1px;
+}
+.full-flight .flight-endpoint > strong {
+  font-size: 29px;
+  line-height: 1.1;
+  letter-spacing: 1px;
+  color: #3d8b75;
+  margin-bottom: 7px;
+}
+.full-flight .flight-endpoint .readable-time {
+  font-size: 42px;
+  font-weight: 600;
+  color: #43362e;
+  letter-spacing: -1.3px;
+  line-height: 1.05;
+  margin: 0;
+}
+.full-flight .flight-endpoint .readable-date {
+  font-size: 17px;
+  color: #675542;
+  font-weight: 500;
+  letter-spacing: 0.1px;
+  margin-top: 5px;
+}
+.full-flight .flight-endpoint .readable-weekday {
+  font-family: "Noto Sans JP", sans-serif;
+  font-size: 12px;
+  color: #8d7961;
+  letter-spacing: 0.4px;
+}
+.full-flight .flight-endpoint .airport-timezone {
+  font-size: 11px;
+  color: #9a846b;
+  margin-top: 4px;
+}
+.full-flight .flight-endpoint:last-child .readable-datetime {
+  align-items: flex-end;
+}
+.full-flight .flight-path {
+  margin-top: 39px;
+  align-self: flex-start;
+  min-width: 38px;
+  padding: 0 25px;
+}
+.hotel-dates {
+  padding: 18px 0;
+  border-top: 1px solid #ddceb8;
+  border-bottom: 1px solid #ddceb8;
+  gap: 20px;
+  align-items: center;
+  justify-content: space-between;
+}
+.hotel-dates .stay-datetime {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 11px;
+}
+.hotel-dates .stay-label {
+  font-size: 11px;
+  letter-spacing: 0.2px;
+  color: #8a7357;
+  font-weight: 500;
+}
+.hotel-dates .readable-time {
+  font-size: 30px;
+  letter-spacing: -0.7px;
+  line-height: 1.1;
+  font-weight: 600;
+}
+.hotel-dates .readable-date {
+  font-size: 14px;
+  color: #6f5b44;
+  letter-spacing: 0;
+}
+.hotel-dates .readable-weekday {
+  font-size: 11px;
+  font-family: "Noto Sans JP", sans-serif;
+  color: #9a8264;
+  letter-spacing: 0;
+}
+.hotel-dates .datetime-unknown {
+  font-size: 15px;
+  letter-spacing: 0;
+}
+.hotel-dates > .stay-datetime:last-child {
+  align-items: flex-end;
+  text-align: right;
+}
+@media (max-width: 600px) {
+  .full-flight .flight-route {
+    margin: 24px 0;
+    gap: 0;
+  }
+  .full-flight .flight-endpoint .flight-direction {
+    font-size: 11px;
+  }
+  .full-flight .flight-endpoint > strong {
+    font-size: 26px;
+    margin-bottom: 6px;
+  }
+  .full-flight .flight-endpoint .readable-time {
+    font-size: 36px;
+    letter-spacing: -1px;
+  }
+  .full-flight .flight-endpoint .readable-date {
+    font-size: 15px;
+  }
+  .full-flight .flight-endpoint .readable-weekday {
+    font-size: 12px;
+  }
+  .full-flight .flight-endpoint .airport-timezone {
+    font-size: 10px;
+  }
+  .full-flight .flight-path {
+    padding: 0 12px;
+    margin-top: 37px;
+    min-width: 30px;
+  }
+  .hotel-dates {
+    gap: 12px;
+    padding: 18px 0;
+  }
+  .hotel-dates .readable-time {
+    font-size: 28px;
+  }
+  .hotel-dates .readable-date {
+    font-size: 14px;
+  }
+  .hotel-dates .readable-weekday {
+    font-size: 12px;
+  }
+  .hotel-dates .stay-label {
+    font-size: 10px;
+  }
+}
+@media (max-width: 360px) {
+  .full-flight .flight-endpoint .readable-time {
+    font-size: 32px;
+  }
+  .full-flight .flight-endpoint .readable-date {
+    font-size: 14px;
+  }
+  .full-flight .flight-path {
+    padding: 0 9px;
+  }
+  .hotel-dates .readable-date {
+    font-size: 13px;
+  }
+}
