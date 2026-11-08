@@ -3688,3 +3688,59 @@ main {
   white-space: nowrap;
   font-size: 11px;
 }
+
+// Keep the page within the viewport, including Safari's horizontal overscroll.
+html,
+body {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: hidden;
+  overscroll-behavior-x: none;
+}
+@supports (overflow: clip) {
+  html,
+  body {
+    overflow-x: clip;
+  }
+}
+#root,
+.app-shell,
+.main-wrap,
+main,
+.card,
+.countdown-card,
+.packing-preview,
+.today-section,
+.event-card,
+.place-card,
+.note-card,
+.field {
+  min-width: 0;
+}
+.home-grid {
+  grid-template-columns: minmax(0, .95fr) minmax(0, 1.4fr) minmax(0, 1.05fr);
+}
+.hero-dates,
+.flight-meta,
+.location,
+.address,
+.place-body h3,
+.packing-item > span {
+  overflow-wrap: anywhere;
+}
+@media (max-width: 1150px) {
+  .home-grid {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr);
+  }
+}
+@media (max-width: 600px) {
+  .home-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .next-flight .flight-route > div:not(.flight-path) {
+    min-width: 0;
+  }
+  .date-tabs {
+    overscroll-behavior-x: contain;
+  }
+}

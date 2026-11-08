@@ -277,16 +277,6 @@ function TripApp({ controller }: { controller: TripController }) {
       );
       return;
     }
-    if (
-      editor.kind === "places" &&
-      ((v.lat &&
-        (!Number.isFinite(Number(v.lat)) || Math.abs(Number(v.lat)) > 90)) ||
-        (v.lng &&
-          (!Number.isFinite(Number(v.lng)) || Math.abs(Number(v.lng)) > 180)))
-    ) {
-      setError("緯度は−90〜90、経度は−180〜180で入力してください。");
-      return;
-    }
     if (editor.kind === "hotels" && v.checkin && v.checkout && v.checkout <= v.checkin) {
       setError("チェックアウトはチェックインより後の日時を選択してください。");
       return;
@@ -356,7 +346,7 @@ function TripApp({ controller }: { controller: TripController }) {
   function map(p: Place) {
     external(
       p.url ||
-        `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(p.lat && p.lng ? `${p.lat},${p.lng}` : `${p.name} ${p.address}`)}`,
+        `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${p.name} ${p.address}`)}`,
     );
   }
   const packed = data.packing.filter((x) => x.done).length;
@@ -1185,11 +1175,6 @@ function TripApp({ controller }: { controller: TripController }) {
                             <MapPin size={14} />
                             {p.address || "住所未登録"}
                           </p>
-                          {p.lat && p.lng && (
-                            <p className="coordinates">
-                              {p.lat}, {p.lng}
-                            </p>
-                          )}
                           <p className="memo">{p.memo}</p>
                           <div className="place-actions">
                             <button
@@ -1926,10 +1911,6 @@ function EditorFields({
           {input("address", "住所")}
           {memo}
           {input("url", "GoogleマップURL", "url")}
-          <div className="field-pair">
-            {input("lat", "緯度（任意）")}
-            {input("lng", "経度（任意）")}
-          </div>
         </>
       )}
       {kind === "flights" && (
